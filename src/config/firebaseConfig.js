@@ -9,15 +9,22 @@ import { getAuth } from "firebase/auth"; // Import Firebase Auth
 
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+// Read configuration from environment variables
 const firebaseConfig = {
-  apiKey: "AIzaSyD09QJBZIXtg9ar2YUzoPP2DcRvr0mD-70",
-  authDomain: "firebasics-a3f9d.firebaseapp.com",
-  projectId: "firebasics-a3f9d",
-  storageBucket: "firebasics-a3f9d.appspot.com",
-  messagingSenderId: "344596307239",
-  appId: "1:344596307239:web:4e097389ec80cca1839d02",
-  measurementId: "G-TCGBXYWDTC" // Optional
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID // Optional
 };
+
+// Basic check to ensure variables are loaded (optional but helpful)
+if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
+  console.error("Firebase configuration environment variables are missing!");
+  // You might want to throw an error or display a message to the user
+}
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
