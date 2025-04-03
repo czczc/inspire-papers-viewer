@@ -226,7 +226,7 @@ async function fetchPaperDetailsByArxiv() {
 
 <template>
   <v-container fluid>
-    <h1 class="text-h5 mb-4">Manage Small Author Papers</h1>
+    <!-- <h1 class="text-h5 mb-4">Manage Small Author Papers</h1> -->
 
     <!-- Use display classes instead of v-if for conditional visibility -->
     <!-- Add Paper Form -->

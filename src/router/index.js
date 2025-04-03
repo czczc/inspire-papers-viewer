@@ -13,7 +13,7 @@ const routes = [
     name: 'AllCollaborationsOverview',
     // Lazy-load the component
     component: () => import('@/views/AllCollaborationsOverview.vue'),
-    meta: { title: 'Collaboration Overview' }
+    meta: { title: 'Overview by Year' }
   },
   {
     path: '/manage-small-papers',
@@ -33,7 +33,7 @@ const router = createRouter({
 
 // Optional: Update document title on route change
 router.afterEach((to) => {
-  document.title = to.meta.title ? `${to.meta.title} | INSPIRE Papers` : 'INSPIRE Papers';
+  document.title = to.meta.title ? `${to.meta.title}` : 'INSPIRE Papers';
 });
 
 export default router;
