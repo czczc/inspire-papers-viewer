@@ -1,6 +1,7 @@
 // src/services/firebaseService.js
 import { collection, getDocs, addDoc, deleteDoc, doc, query, orderBy, serverTimestamp, where, limit, updateDoc } from 'firebase/firestore'; // Added where, limit, updateDoc
-import { db } from '@/config/firebaseConfig';
+import { db, auth } from '@/config/firebaseConfig'; // Import auth
+import { GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "firebase/auth"; // Import Auth functions
 
 const papersCollectionRef = collection(db, "edg_small_authors");
 
@@ -106,3 +107,50 @@ export const deleteSmallPaper = async (id) => {
 
 // Note: Update functionality is not included as per the initial request,
 // but could be added here if needed (e.g., using updateDoc).
+
+
+// --- Authentication Functions ---
+
+const provider = new GoogleAuthProvider();
+
+// Function to sign in with Google Popup
+export const signInWithGoogle = async () => {
+  try {
+    const result = await signInWithPopup(auth, provider);
+    // This gives you a Google Access Token. You can use it to access the Google API.
+    // const credential = GoogleAuthProvider.credentialFromResult(result);
+    // const token = credential.accessToken;
+    // The signed-in user info.
+    const user = result.user;
+    console.log("User signed in: ", user.displayName);
+    return user; // Return user object on success
+  } catch (error) {
+    // Handle Errors here.
+    const errorCode = error.code;
+    const errorMessage = error.message;
+    // The email of the user's account used.
+    // const email = error.customData.email;
+    // The AuthCredential type that was used.
+    // const credential = GoogleAuthProvider.credentialFromError(error);
+    console.error("Google Sign-In Error:", errorCode, errorMessage);
+    throw new Error(`Google Sign-In Failed: ${errorMessage}`); // Re-throw for component handling
+  }
+};
+
+// Function to sign out the current user
+export const signOutUser = async () => {
+  try {
+    await signOut(auth);
+    console.log("User signed out successfully.");
+  } catch (error) {
+    console.error("Sign Out Error:", error);
+    throw new Error("Sign Out Failed."); // Re-throw
+  }
+};
+
+// Function to listen for authentication state changes
+// It accepts a callback function that will be executed whenever the auth state changes.
+// The callback will receive the user object (or null if logged out).
+export const onAuthStateChangedListener = (callback) => {
+  return onAuthStateChanged(auth, callback);
+};

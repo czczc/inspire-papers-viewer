@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router';
+import { auth } from '@/config/firebaseConfig'; // Import Firebase auth instance
 
 const routes = [
   {
@@ -18,6 +19,7 @@ const routes = [
     path: '/manage-small-papers',
     name: 'ManageSmallPapers',
     component: () => import('@/views/ManageSmallPapers.vue'),
+    // Remove requiresAuth meta and beforeEnter guard
     meta: { title: 'Manage Small Papers' }
   },
   // Optional: Add a catch-all route for 404s

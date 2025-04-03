@@ -9,15 +9,34 @@
       <v-btn to="/search" text>
         Search Collaboration
       </v-btn>
+      <!-- Make Manage Small Papers link always visible -->
       <v-btn to="/manage-small-papers" text>
         Manage Small Papers
       </v-btn>
+
+      <v-spacer></v-spacer> <!-- Add spacer before auth buttons -->
+
+      <!-- Login Button -->
+      <v-btn v-if="!currentUser" @click="handleSignIn" color="white" outlined>
+        <v-icon left>mdi-google</v-icon>
+        Login
+      </v-btn>
+
+      <!-- User Info and Logout Button -->
+      <template v-if="currentUser">
+        <span class="mr-3 white--text">Welcome, {{ currentUser.displayName }}</span>
+        <v-btn @click="handleSignOut" color="white" outlined>
+          Logout
+        </v-btn>
+      </template>
+
     </v-app-bar>
 
     <v-main>
+      <!-- Pass isLoggedIn state down (though ManageSmallPapers won't use it directly now) -->
       <router-view v-slot="{ Component }">
         <v-fade-transition mode="out-in">
-          <component :is="Component" />
+          <component :is="Component" :is-logged-in="isLoggedIn" /> <!-- Removed key binding -->
         </v-fade-transition>
       </router-view>
     </v-main>
@@ -30,7 +49,56 @@
 </template>
 
 <script setup>
-// No script logic needed in the main layout for now
+import { ref, onMounted, onUnmounted, computed } from 'vue'; // Added computed
+import { signInWithGoogle, signOutUser, onAuthStateChangedListener } from '@/services/firebaseService';
+import { useRouter } from 'vue-router'; // Import useRouter
+
+const currentUser = ref(null);
+const router = useRouter(); // Get router instance
+let unsubscribeAuth = null; // To hold the unsubscribe function
+
+// Computed property for boolean login status
+const isLoggedIn = computed(() => !!currentUser.value);
+
+// --- Authentication Handlers ---
+async function handleSignIn() {
+  try {
+    await signInWithGoogle();
+    // Auth state change will update currentUser via the listener
+  } catch (error) {
+    console.error("Login failed in App.vue:", error);
+    // Optionally show an error message to the user
+  }
+}
+
+async function handleSignOut() {
+  try {
+    await signOutUser();
+    // Auth state change will update currentUser via the listener
+    // Redirect to home page after logout
+    router.push('/');
+  } catch (error) {
+    console.error("Logout failed in App.vue:", error);
+    // Optionally show an error message
+  }
+}
+
+// --- Lifecycle Hooks ---
+onMounted(() => {
+  // Start listening for auth state changes when the component mounts
+  unsubscribeAuth = onAuthStateChangedListener((user) => {
+    currentUser.value = user;
+    console.log("Auth State Changed - Current User:", user?.displayName || 'Logged Out');
+  });
+});
+
+onUnmounted(() => {
+  // Stop listening when the component unmounts to prevent memory leaks
+  if (unsubscribeAuth) {
+    unsubscribeAuth();
+  }
+});
+
 </script>
 
 <style>

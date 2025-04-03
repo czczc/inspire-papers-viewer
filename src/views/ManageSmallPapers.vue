@@ -1,8 +1,17 @@
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'; // Added watch, nextTick
 import { useInspireHelpers } from '@/composables/useInspireHelpers';
 // Import the Firebase service functions
 import { getSmallPapers, addSmallPaper, deleteSmallPaper, updateSmallPaper } from '@/services/firebaseService';
+import { auth } from '@/config/firebaseConfig'; // Ensure auth is imported
+import { onAuthStateChanged } from 'firebase/auth'; // Import listener
+
+// --- Define Props ---
+// Removed props
+
+// Local reactive state for login status
+const isLoggedIn = ref(false);
+let unsubscribeAuth = null; // To hold the unsubscribe function
 
 // --- Initialize Helpers ---
 const { getAuthors, getPublicationInfo } = useInspireHelpers();
@@ -11,7 +20,7 @@ const papers = ref([]); // To hold papers { id: firestoreId, ...data }
 const isLoading = ref(false); // Loading state for the main list/add/delete
 const isFetchingDetails = ref(false); // Separate loading state for fetching details
 const error = ref(null);
-const resultsContainer = ref(null); // Ref for KaTeX rendering
+// Removed resultsContainer ref
 
 // Refs for the new paper form
 const newPaperData = ref({
@@ -20,7 +29,7 @@ const newPaperData = ref({
   year: null,
   publication: '',
   authors: '',
-  added_by: 'cline_user' // Default placeholder
+  // added_by will be set automatically based on logged-in user
 });
 
 // --- Table Headers ---
@@ -39,9 +48,8 @@ async function fetchPapers() {
   isLoading.value = true;
   error.value = null;
   try {
+    // Fetch papers but don't render KaTeX here directly
     papers.value = await getSmallPapers();
-    // Trigger KaTeX after fetching papers for the table
-    renderKaTeXManagePapers();
   } catch (err) {
     console.error("Error fetching papers: ", err);
     error.value = err.message || "Failed to load papers.";
@@ -70,14 +78,25 @@ async function addPaper() {
    }
 
   error.value = null; // Clear previous errors
-  const paperToAdd = { ...newPaperData.value }; // Create copy to pass
+
+  // Check the local isLoggedIn ref and auth.currentUser for safety
+  if (!isLoggedIn.value || !auth.currentUser) {
+      error.value = "You must be logged in to add papers.";
+      return;
+  }
+
+  const paperToAdd = {
+      ...newPaperData.value,
+      added_by: auth.currentUser.uid // Use user ID from auth instance
+  };
 
   // Add Paper logic now only adds
   try {
     await addSmallPaper(paperToAdd);
     // Reset form fields
     newPaperData.value = {
-        arxiv_id: '', title: '', year: null, publication: '', authors: '', added_by: 'cline_user'
+        arxiv_id: '', title: '', year: null, publication: '', authors: ''
+        // No need to reset added_by here
     };
     await fetchPapers(); // Refresh list
   } catch (err) {
@@ -145,10 +164,34 @@ async function deletePaper(paperId) {
   }
 }
 
-// Fetch papers when component mounts
+// Fetch papers and set up auth listener when component mounts
 onMounted(() => {
   fetchPapers();
+  // Set initial state
+  isLoggedIn.value = !!auth.currentUser;
+  console.log('ManageSmallPapers Mounted - Initial isLoggedIn state:', isLoggedIn.value);
+  // Start listening for auth state changes
+  unsubscribeAuth = onAuthStateChanged(auth, async (user) => { // Make callback async
+    const newState = !!user;
+    if (isLoggedIn.value !== newState) { // Update only if state actually changes
+        isLoggedIn.value = newState;
+        console.log(`ManageSmallPapers Auth Listener: User is ${user ? 'logged in' : 'logged out'}. isLoggedIn ref: ${isLoggedIn.value}`);
+        // Force update after state change
+        await nextTick();
+        console.log('Forced update via nextTick after auth state change.');
+    }
+  });
 });
+
+// Clean up the listener when the component unmounts
+onUnmounted(() => {
+  if (unsubscribeAuth) {
+    unsubscribeAuth();
+    console.log('ManageSmallPapers Unmounted - Unsubscribed from auth changes.');
+  }
+});
+
+// Removed KaTeX watcher
 
 // --- Function to fetch details from INSPIRE based on arXiv ID ---
 async function fetchPaperDetailsByArxiv() {
@@ -177,20 +220,7 @@ async function fetchPaperDetailsByArxiv() {
     finally { isFetchingDetails.value = false; }
 }
 
-// --- Function to explicitly render KaTeX ---
-function renderKaTeXManagePapers() {
-    setTimeout(() => {
-        if (resultsContainer.value && window.renderMathInElement) {
-            try {
-                console.log("Rendering KaTeX on ManageSmallPapers container");
-                window.renderMathInElement(resultsContainer.value, {
-                    delimiters: [ { left: "$$", right: "$$", display: true }, { left: "$", right: "$", display: false }, { left: "\\(", right: "\\)", display: false }, { left: "\\[", right: "\\]", display: true } ],
-                    ignoredTags: ["script", "noscript", "style", "textarea", "pre", "code", "a"], throwOnError: false
-                });
-            } catch (error) { console.error("KaTeX rendering failed on ManageSmallPapers:", error); }
-        } else if (!window.renderMathInElement) { console.warn("KaTeX auto-render function not found."); }
-    }, 150);
-}
+// Removed renderKaTeXManagePapers function
 
 </script>
 
@@ -198,51 +228,61 @@ function renderKaTeXManagePapers() {
   <v-container fluid>
     <h1 class="text-h5 mb-4">Manage Small Author Papers</h1>
 
+    <!-- Use display classes instead of v-if for conditional visibility -->
     <!-- Add Paper Form -->
-    <v-form @submit.prevent="addPaper" class="mb-6">
-       <v-row align="start">
-         <v-col cols="12" sm="6" md="4">
-           <v-text-field
-            v-model="newPaperData.arxiv_id" label="arXiv ID*" placeholder="e.g., 2301.01234"
-            variant="outlined" density="compact" hide-details="auto" required
-            append-inner-icon="mdi-download-outline" @click:append-inner="fetchPaperDetailsByArxiv"
-            :loading="isFetchingDetails" :disabled="isFetchingDetails"
-          ></v-text-field>
-         </v-col>
-          <v-col cols="12" sm="6" md="8">
-           <v-text-field
-            v-model="newPaperData.title" label="Title*" placeholder="Paper Title"
-            variant="outlined" density="compact" hide-details="auto" required
-          ></v-text-field>
-         </v-col>
-          <v-col cols="12" md="6" lg="4">
-           <v-text-field
-            v-model.number="newPaperData.year" label="Year" type="number" placeholder="YYYY"
-            variant="outlined" density="compact" hide-details="auto"
-          ></v-text-field>
-         </v-col>
-          <v-col cols="12" md="6" lg="8">
-           <v-text-field
-            v-model="newPaperData.publication" label="Publication Info" placeholder="e.g., Phys.Rev.D 100, 012001"
-            variant="outlined" density="compact" hide-details="auto"
-          ></v-text-field>
-         </v-col>
-          <v-col cols="12">
-           <v-text-field
-            v-model="newPaperData.authors" label="Authors" placeholder="e.g., First Author et al."
-            variant="outlined" density="compact" hide-details="auto"
-          ></v-text-field>
-         </v-col>
-       </v-row>
-       <v-row justify="end" class="mt-3">
-          <v-col cols="auto">
-            <v-btn type="submit" color="primary">Add Paper</v-btn>
+    <v-card :class="{ 'd-none': !isLoggedIn }" class="mb-6 pa-4" elevation="2">
+      <h2 class="text-h6 mb-3">Add New Paper</h2>
+      <v-form @submit.prevent="addPaper">
+        <v-row align="start">
+          <v-col cols="12" sm="6" md="4">
+            <v-text-field
+              v-model="newPaperData.arxiv_id" label="arXiv ID*" placeholder="e.g., 2301.01234"
+              variant="outlined" density="compact" hide-details="auto" required
+              append-inner-icon="mdi-download-outline" @click:append-inner="fetchPaperDetailsByArxiv"
+              :loading="isFetchingDetails" :disabled="isFetchingDetails"
+            ></v-text-field>
           </v-col>
-       </v-row>
-    </v-form>
+          <v-col cols="12" sm="6" md="8">
+            <v-text-field
+              v-model="newPaperData.title" label="Title*" placeholder="Paper Title"
+              variant="outlined" density="compact" hide-details="auto" required
+            ></v-text-field>
+          </v-col>
+          <v-col cols="12" md="6" lg="4">
+            <v-text-field
+              v-model.number="newPaperData.year" label="Year" type="number" placeholder="YYYY"
+              variant="outlined" density="compact" hide-details="auto"
+            ></v-text-field>
+          </v-col>
+          <v-col cols="12" md="6" lg="8">
+            <v-text-field
+              v-model="newPaperData.publication" label="Publication Info" placeholder="e.g., Phys.Rev.D 100, 012001"
+              variant="outlined" density="compact" hide-details="auto"
+            ></v-text-field>
+          </v-col>
+          <v-col cols="12">
+            <v-text-field
+              v-model="newPaperData.authors" label="Authors" placeholder="e.g., First Author et al."
+              variant="outlined" density="compact" hide-details="auto"
+            ></v-text-field>
+          </v-col>
+        </v-row>
+        <v-row justify="end" class="mt-3">
+          <v-col cols="auto">
+            <v-btn type="submit" color="primary" :disabled="!isLoggedIn">Add Paper</v-btn>
+          </v-col>
+        </v-row>
+        </v-form>
+      </v-card>
+      <!-- Removed extra </v-form> here -->
+    <!-- Login Prompt Alert -->
+    <v-alert :class="{ 'd-none': isLoggedIn }" type="info" variant="tonal" class="mb-6">
+      Please log in to add, update, or delete papers.
+    </v-alert>
+    <!-- Removed template wrapper -->
 
     <!-- Loading Indicator -->
-     <div class="text-center my-8" v-if="isLoading">
+    <div class="text-center my-8" v-if="isLoading">
       <v-progress-circular indeterminate color="primary" size="64"></v-progress-circular>
       <p class="mt-4">Loading paper list...</p>
     </div>
@@ -254,34 +294,42 @@ function renderKaTeXManagePapers() {
 
     <!-- Paper List Table -->
     <v-card v-if="!isLoading && !error" elevation="2">
-       <div ref="resultsContainer"> <!-- Add ref here for KaTeX -->
-         <v-data-table
-           :headers="tableHeaders"
-           :items="papers"
-           item-value="id"
-           class="elevation-0"
-           density="compact"
-           :items-per-page="50"
-           no-data-text="No papers added yet."
-         >
-           <template v-slot:item.title="{ item }">
-             <span v-html="item.title || 'No Title'"></span>
-           </template>
+      <div> <!-- Removed ref="resultsContainer" -->
+        <!-- Removed the key binding -->
+        <v-data-table
+          :headers="tableHeaders"
+          :items="papers"
+          item-value="id"
+          class="elevation-0"
+          density="compact"
+          :items-per-page="50"
+          no-data-text="No papers added yet."
+        >
+          <!-- Display title as plain text -->
+          <template v-slot:item.title="{ item }">
+            {{ item.title || 'No Title' }}
+          </template>
            <!-- Removed specific slot for arxiv_id to display as plain text -->
+           <!-- Conditionally render actions column content based on local isLoggedIn ref -->
            <template v-slot:item.actions="{ item }">
-              <v-btn
-                color="blue-darken-1" icon="mdi-update" variant="text"
-                size="small" class="mr-1"
-                @click="updatePaperDetails(item.id, item.arxiv_id)"
-                title="Update from INSPIRE"
-              ></v-btn>
-              <v-btn
-                color="grey-lighten-1" icon="mdi-delete" variant="text"
-                size="small" @click="deletePaper(item.id)"
-              ></v-btn>
+             <template v-if="isLoggedIn">
+               <v-btn
+                 color="blue-darken-1" icon="mdi-update" variant="text"
+                 size="small" class="mr-1"
+                 @click="updatePaperDetails(item.id, item.arxiv_id)"
+                 title="Update from INSPIRE"
+                 :disabled="!isLoggedIn"
+               ></v-btn>
+               <v-btn
+                 color="grey-lighten-1" icon="mdi-delete" variant="text"
+                 size="small" @click="deletePaper(item.id)"
+                 :disabled="!isLoggedIn"
+               ></v-btn>
+             </template>
+             <span v-else class="text-caption text-disabled">Log in to manage</span>
            </template>
          </v-data-table>
-       </div>
+      </div>
     </v-card>
 
   </v-container>
