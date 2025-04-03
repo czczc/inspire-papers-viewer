@@ -6,8 +6,11 @@
       <v-btn to="/" text> <!-- Updated path -->
         Overview by Year
       </v-btn>
-      <v-btn to="/search" text> <!-- Updated path -->
+      <v-btn to="/search" text>
         Search Collaboration
+      </v-btn>
+      <v-btn to="/manage-small-papers" text>
+        Manage Small Papers
       </v-btn>
     </v-app-bar>
 

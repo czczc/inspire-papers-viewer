@@ -12,7 +12,13 @@ const routes = [
     name: 'AllCollaborationsOverview',
     // Lazy-load the component
     component: () => import('@/views/AllCollaborationsOverview.vue'),
-    meta: { title: 'Publications by Year' }
+    meta: { title: 'Collaboration Overview' }
+  },
+  {
+    path: '/manage-small-papers',
+    name: 'ManageSmallPapers',
+    component: () => import('@/views/ManageSmallPapers.vue'),
+    meta: { title: 'Manage Small Papers' }
   },
   // Optional: Add a catch-all route for 404s
   // { path: '/:pathMatch(.*)*', name: 'NotFound', component: NotFoundComponent },

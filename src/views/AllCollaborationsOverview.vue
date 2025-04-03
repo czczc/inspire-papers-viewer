@@ -165,7 +165,7 @@ onMounted(() => {
       <!-- Total Count Display (Left) -->
       <v-col cols="auto">
         <p v-if="!isLoading && searchAttempted && totalPaperCount > 0" class="text-h6">
-          EDG Papers in {{ year }}: {{ totalPaperCount }}
+          {{ totalPaperCount }} EDG Papers in Year {{ year }}
         </p>
          <p v-else-if="!isLoading && searchAttempted" class="text-subtitle-1 text-medium-emphasis">
              Total Papers: 0
