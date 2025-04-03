@@ -1,6 +1,6 @@
 # INSPIRE Papers Viewer
 
-A web application to view papers from High Energy Physics collaborations, fetched from INSPIRE-HEP.
+A web application to view papers from BNL EDG Group, fetched from INSPIRE-HEP.
 
 ## Features
 
@@ -12,6 +12,10 @@ A web application to view papers from High Energy Physics collaborations, fetche
 *   Renders LaTeX in paper titles using KaTeX.
 *   Separate views for single collaboration search and multi-collaboration overview by year.
 *   Overview page loads data for the current year automatically.
+*   Manage a separate list of "small author papers" stored in Firebase (requires Google login).
+    *   Add new papers with arXiv ID, title, authors, publication details.
+    *   View, edit, and delete existing small papers.
+    *   Small papers for the selected year are displayed on the Overview page.
 
 ## Project Setup
 
