@@ -17,6 +17,28 @@ export const getSmallPapers = async () => {
   }
 };
 
+// Fetch documents filtered by year, ordered by arxiv_id descending
+export const getSmallPapersByYear = async (year) => {
+  if (!year) {
+    throw new Error("Year is required to fetch papers.");
+  }
+  try {
+    // Firestore queries require number type for numerical comparisons if the field is stored as a number
+    // If 'year' is stored as a string, use string comparison. Assuming it's stored as a number here.
+    // If stored as string: const q = query(papersCollectionRef, where("year", "==", year.toString()), orderBy("arxiv_id", "desc"));
+    const numericYear = parseInt(year); // Ensure year is a number for the query
+    if (isNaN(numericYear)) {
+        throw new Error("Invalid year provided.");
+    }
+    const q = query(papersCollectionRef, where("year", "==", numericYear), orderBy("arxiv_id", "desc"));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  } catch (error) {
+    console.error(`Error getting documents for year ${year}: `, error);
+    throw new Error(`Failed to fetch papers for year ${year} from database.`);
+  }
+};
+
 // Find a paper by its arXiv ID (returns Firestore doc ID if found, null otherwise)
 export const findPaperByArxivId = async (arxivId) => {
     if (!arxivId || !arxivId.trim()) {
