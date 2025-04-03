@@ -294,8 +294,7 @@ async function fetchPaperDetailsByArxiv() {
 
     <!-- Paper List Table -->
     <v-card v-if="!isLoading && !error" elevation="2">
-      <div> <!-- Removed ref="resultsContainer" -->
-        <!-- Removed the key binding -->
+      <div> 
         <v-data-table
           :headers="tableHeaders"
           :items="papers"
@@ -309,7 +308,12 @@ async function fetchPaperDetailsByArxiv() {
           <template v-slot:item.title="{ item }">
             {{ item.title || 'No Title' }}
           </template>
-           <!-- Removed specific slot for arxiv_id to display as plain text -->
+          <!-- Add slot for arXiv ID link -->
+          <template v-slot:item.arxiv_id="{ item }">
+            <a :href="`https://arxiv.org/abs/${item.arxiv_id}`" target="_blank" rel="noopener noreferrer" class="text-decoration-none">
+              {{ item.arxiv_id }}
+            </a>
+          </template>
            <!-- Conditionally render actions column content based on local isLoggedIn ref -->
            <template v-slot:item.actions="{ item }">
              <template v-if="isLoggedIn">

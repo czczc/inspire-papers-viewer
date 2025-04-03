@@ -3,18 +3,16 @@
     <v-app-bar app color="primary" dark>
       <v-toolbar-title>EDG Publications</v-toolbar-title>
       <v-spacer></v-spacer>
-      <v-btn to="/" text> <!-- Updated path -->
+      <!-- Added mr-2 for spacing -->
+      <v-btn to="/" text class="mr-2">
         Overview by Year
       </v-btn>
-      <v-btn to="/search" text>
+      <v-btn to="/search" text class="mr-2">
         Search Collaboration
       </v-btn>
-      <!-- Make Manage Small Papers link always visible -->
-      <v-btn to="/manage-small-papers" text>
+      <v-btn to="/manage-small-papers" text class="mr-2">
         Manage Small Papers
       </v-btn>
-
-      <v-spacer></v-spacer> <!-- Add spacer before auth buttons -->
 
       <!-- Login Button -->
       <v-btn v-if="!currentUser" @click="handleSignIn" color="white" outlined>
@@ -24,7 +22,12 @@
 
       <!-- User Info and Logout Button -->
       <template v-if="currentUser">
-        <span class="mr-3 white--text">Welcome, {{ currentUser.displayName }}</span>
+        <!-- Display First Name in Avatar -->
+        <v-avatar color="info" size="36" class="mr-2">
+          <span class="text-h6">{{ firstName.charAt(0) }}</span> <!-- Show first initial -->
+        </v-avatar>
+        <!-- <span class="mr-3 white--text">{{ firstName }}</span>  -->
+        <!-- Logout Button -->
         <v-btn @click="handleSignOut" color="white" outlined>
           Logout
         </v-btn>
@@ -59,6 +62,11 @@ let unsubscribeAuth = null; // To hold the unsubscribe function
 
 // Computed property for boolean login status
 const isLoggedIn = computed(() => !!currentUser.value);
+
+// Computed property for user's first name
+const firstName = computed(() => {
+  return currentUser.value?.displayName?.split(' ')[0] || '';
+});
 
 // --- Authentication Handlers ---
 async function handleSignIn() {
