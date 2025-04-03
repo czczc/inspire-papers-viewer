@@ -8,7 +8,7 @@ export function useInspireHelpers() {
     const authors = paper.metadata?.authors;
     if (!authors || authors.length === 0) return 'N/A'; // Handle no authors case
 
-    const firstAuthor = authors[0]?.full_name || 'N/A'; // Get first author's name
+    const firstAuthor = authors[0]?.full_name || 'N/A'; // Get first author's full_name
 
     // If more than one author, append "et al."
     if (authors.length > 1) {

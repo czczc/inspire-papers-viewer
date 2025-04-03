@@ -22,10 +22,10 @@
       </router-view>
     </v-main>
 
-    <v-footer app class="pa-3" color="grey-lighten-1">
+    <!-- <v-footer app class="pa-3" color="grey-lighten-1">
       <v-spacer></v-spacer>
       <div>Data from &copy; INSPIRE-HEP {{ new Date().getFullYear() }}</div>
-    </v-footer>
+    </v-footer> -->
   </v-app>
 </template>
 
