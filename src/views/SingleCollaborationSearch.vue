@@ -73,20 +73,34 @@ async function fetchPapers() {
     if (!response.ok) { throw new Error(`HTTP error! Status: ${response.status}`); }
     const data = await response.json();
     if (data.hits && data.hits.hits) {
-      const filteredPapers = data.hits.hits.filter(paper => { // Initial filtering
-          const hasEnoughAuthors = paper.metadata?.authors && paper.metadata.authors.length >= 30;
+      let processedPapers = data.hits.hits.filter(paper => { // Initial filtering
+          // Determine author threshold based on collaboration
+          const isBelleII = collabValue.toLowerCase() === 'belle-ii';
+          const requiredAuthors = isBelleII ? 120 : 30;
+          const hasEnoughAuthors = paper.metadata?.authors && paper.metadata.authors.length >= requiredAuthors;
+
           if (!hasEnoughAuthors) return false;
-          if (collabValue.toLowerCase() === 'belle-ii') {
+          if (isBelleII) {
               const collaborations = paper.metadata?.collaborations;
               if (!Array.isArray(collaborations)) return false;
-              const includesBelleII = collaborations.some(c => c?.value === 'Belle-II');
+              const includesBelleII = collaborations.some(c => c?.value === 'Belle-II' || c?.value === 'Belle II');
               const includesSubCollaboration = collaborations.some(c => c?.value?.startsWith('Belle-II '));
+              // if (paper.metadata.titles[0].title.includes("The Silicon Vertex")) {
+              //   console.log(paper.metadata.titles[0].title)
+              //   console.log(paper.metadata)
+              // }
               return includesBelleII && !includesSubCollaboration;
           }
           return true;
       });
-      // Map data
-      papers.value = filteredPapers.map(paper => {
+
+      // Additional filtering if "Published Only" is checked
+      if (publishedOnly.value) {
+          processedPapers = processedPapers.filter(paper => paper.metadata?.refereed !== false);
+      }
+
+      // Map data from processedPapers
+      papers.value = processedPapers.map(paper => {
           const pubInfo = paper.metadata?.publication_info?.[0];
           const arxivData = paper.metadata?.arxiv_eprints?.[0];
           const paperYear = pubInfo?.year || (paper.metadata?.earliest_date ? paper.metadata.earliest_date.substring(0, 4) : 'N/A');
