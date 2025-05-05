@@ -13,7 +13,7 @@ const isLoading = ref(false);
 const error = ref(null);
 const searchAttempted = ref(false);
 const viewMode = ref('table'); // Default view
-const resultsContainer = ref(null);
+const resultsContainer = ref(null); const publishedOnly = ref(false); // Added state for the checkbox
 // Removed showPublishedOnly ref
 
 // --- Predefined Collaboration List ---
@@ -48,8 +48,10 @@ async function fetchPapers() {
   isLoading.value = true; error.value = null; papers.value = []; searchAttempted.value = true;
 
   const collabValue = typeof collaboration.value === 'string' ? collaboration.value.trim() : collaboration.value;
-  let query = `cn:${encodeURIComponent(collabValue)} and year:${year.value}`;
-  const apiUrl = `https://inspirehep.net/api/literature?q=${query}&size=250&sort=mostrecent`;
+  // Construct query based on publishedOnly state
+  const yearQueryPart = publishedOnly.value ? `jy:${year.value}` : `year:${year.value}`;
+  let query = `cn:${encodeURIComponent(collabValue)} and ${yearQueryPart}`;
+    const apiUrl = `https://inspirehep.net/api/literature?q=${query}&size=250&sort=mostrecent`;
 
   try {
     const response = await fetch(apiUrl, { headers: { 'Accept': 'application/json' } });
@@ -114,7 +116,7 @@ watch([papers, viewMode], async () => {
   <v-container fluid>
     <v-form @submit.prevent="fetchPapers">
       <v-row align="center">
-        <v-col cols="12" md="5">
+        <v-col cols="12" md="4">
           <v-combobox
             v-model="collaboration" :items="collaborationSuggestions" label="Collaboration Name"
             placeholder="Select or type a name" variant="outlined" density="compact"
@@ -128,7 +130,12 @@ watch([papers, viewMode], async () => {
             :max="new Date().getFullYear() + 1" required
           ></v-text-field>
         </v-col>
-        <v-col cols="12" md="3">
+        <v-col cols="12" md="2">
+          <v-checkbox
+            v-model="publishedOnly" label="Published" density="compact"
+            hide-details class="mt-n2 mb-n3"
+          ></v-checkbox>
+        </v-col> <v-col cols="12" md="2">
           <v-btn type="submit" :loading="isLoading" :disabled="isLoading" color="primary" block size="large">
             {{ isLoading ? 'Searching...' : 'Search Papers' }}
           </v-btn>

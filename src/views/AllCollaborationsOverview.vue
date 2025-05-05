@@ -17,6 +17,7 @@ const isLoadingSmallPapers = ref(false); // Loading state for small papers
 const errorSmallPapers = ref(null); // Error state for small papers
 const viewMode = ref('table'); // Add view mode state, default to table
 const resultsContainer = ref(null); // Ref for KaTeX rendering
+const publishedOnly = ref(false); // Added state for the checkbox
 
 // --- Predefined Collaboration List ---
 const collaborationsToFetch = [
@@ -62,7 +63,8 @@ async function fetchAllCollaborations() {
 
   // Fetch INSPIRE papers
   const inspireFetchPromises = collaborationsToFetch.map(collabName =>
-      fetchSingleCollaboration(collabName, year.value)
+      // Pass publishedOnly state to the fetch function
+      fetchSingleCollaboration(collabName, year.value, publishedOnly.value)
   );
   
   // Fetch small papers from Firestore
@@ -124,8 +126,10 @@ async function fetchAllCollaborations() {
 }
 
 // Helper function (remains the same)
-async function fetchSingleCollaboration(collabName, yearValue) {
-  const query = `cn:${encodeURIComponent(collabName)} and year:${yearValue}`;
+async function fetchSingleCollaboration(collabName, yearValue, isPublishedOnly) {
+  // Construct query based on publishedOnly state
+  const yearQueryPart = isPublishedOnly ? `jy:${yearValue}` : `year:${yearValue}`;
+  const query = `cn:${encodeURIComponent(collabName)} and ${yearQueryPart}`;
   const apiUrl = `https://inspirehep.net/api/literature?q=${query}&size=250&sort=mostrecent`;
   const response = await fetch(apiUrl, { headers: { 'Accept': 'application/json' } });
   if (!response.ok) throw new Error(`HTTP error ${response.status} for ${collabName}`);
@@ -228,18 +232,24 @@ onMounted(() => {
       <v-col cols="12" md="8" lg="7">
         <v-form @submit.prevent="fetchAllCollaborations">
           <v-row align="center" justify="end" no-gutters>
-             <v-col cols="12" sm="5" md="5" class="pr-2">
+             <v-col cols="12" sm="4" md="4" class="pr-2"> <!-- Adjusted cols -->
                <v-text-field
                 v-model="year" label="Year" type="number" placeholder="Enter Year"
                 variant="outlined" density="compact" hide-details="auto" min="1900"
                 :max="new Date().getFullYear() + 1" required
-              ></v-text-field>
-            </v-col>
-             <v-col cols="12" sm="3" md="3" class="pr-2">
-               <v-btn type="submit" :loading="isLoading" :disabled="isLoading" color="primary" block size="large">
-                 {{ isLoading ? 'Loading...' : 'Search' }}
-               </v-btn>
+               ></v-text-field>
              </v-col>
+             <v-col cols="12" sm="3" md="3" class="pr-2"> <!-- Added checkbox col -->
+              <v-checkbox
+                v-model="publishedOnly" label="Published" density="compact"
+                hide-details class="mt-n2 mb-n3"
+              ></v-checkbox>
+            </v-col>
+             <v-col cols="12" sm="3" md="3" class="pr-2"> <!-- Kept button col -->
+              <v-btn type="submit" :loading="isLoading" :disabled="isLoading" color="primary" block size="large">
+                {{ isLoading ? 'Loading...' : 'Search' }}
+              </v-btn>
+            </v-col>
              <v-col cols="auto" v-if="!isLoading && searchAttempted && totalPaperCount > 0">
                  <!-- View Mode Toggle -->
                  <v-btn-toggle v-model="viewMode" variant="outlined" divided density="compact" mandatory>

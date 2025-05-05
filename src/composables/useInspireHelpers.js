@@ -21,6 +21,7 @@ export function useInspireHelpers() {
 
   function getPublicationInfo(paper) {
       const pubInfoArray = paper.metadata?.publication_info;
+      // console.log('Publication Info Array:', paper.metadata); // Debugging line
       // Early exit if no publication info array
       if (!pubInfoArray || pubInfoArray.length === 0) {
            // Try arXiv as a last resort if no pub info at all
