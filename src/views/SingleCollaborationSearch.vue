@@ -7,7 +7,11 @@ const { getAuthors, getPublicationInfo, getDoiLink, getInspireLink, getArxivLink
 
 // --- State ---
 const collaboration = ref('DUNE'); // Default collaboration
-const year = ref(new Date().getFullYear().toString()); // Default year
+// Rename 'year' to 'startYear' and add 'endYear'
+// const year = ref(new Date().getFullYear().toString()); // Remove old year ref
+const currentYear = new Date().getFullYear().toString();
+const startYear = ref(currentYear); // Add startYear ref
+const endYear = ref(currentYear); // Add endYear ref
 const papers = ref([]); // Holds the raw filtered list from API
 const isLoading = ref(false);
 const error = ref(null);
@@ -36,20 +40,31 @@ const tableHeaders = [
 // --- Methods ---
 async function fetchPapers() {
   // Validation...
-  if (!collaboration.value || !year.value) {
-      error.value = 'Please enter both Collaboration Name and Year.';
+  if (!collaboration.value || !startYear.value || !endYear.value) {
+      error.value = 'Please enter Collaboration Name, Start Year, and End Year.';
       papers.value = []; searchAttempted.value = true; return;
   }
-   if (isNaN(parseInt(year.value))) {
-      error.value = 'Year must be a valid number.';
+   const startY = parseInt(startYear.value);
+   const endY = parseInt(endYear.value);
+   if (isNaN(startY) || isNaN(endY)) {
+      error.value = 'Start Year and End Year must be valid numbers.';
       papers.value = []; searchAttempted.value = true; return;
   }
+   if (startY > endY) {
+       error.value = 'Start Year cannot be after End Year.';
+       papers.value = []; searchAttempted.value = true; return;
+   }
 
   isLoading.value = true; error.value = null; papers.value = []; searchAttempted.value = true;
 
   const collabValue = typeof collaboration.value === 'string' ? collaboration.value.trim() : collaboration.value;
-  // Construct query based on publishedOnly state
-  const yearQueryPart = publishedOnly.value ? `jy:${year.value}` : `year:${year.value}`;
+  // Construct query based on publishedOnly state and year range
+  const yearField = publishedOnly.value ? 'jy' : 'year';
+  // Handle single year vs range (using parsed startY/endY from validation)
+  // Corrected range query format
+  const yearQueryPart = startY === endY
+      ? `${yearField}:${startY}`
+      : `${yearField} >= ${startY} and ${yearField} <= ${endY}`; // Use >= and <= for inclusive range
   let query = `cn:${encodeURIComponent(collabValue)} and ${yearQueryPart}`;
     const apiUrl = `https://inspirehep.net/api/literature?q=${query}&size=250&sort=mostrecent`;
 
@@ -115,27 +130,34 @@ watch([papers, viewMode], async () => {
 <template>
   <v-container fluid>
     <v-form @submit.prevent="fetchPapers">
-      <v-row align="center">
-        <v-col cols="12" md="4">
+      <v-row align="start"> 
+        <v-col cols="12" sm="6" md="3">
           <v-combobox
             v-model="collaboration" :items="collaborationSuggestions" label="Collaboration Name"
             placeholder="Select or type a name" variant="outlined" density="compact"
             hide-details="auto" required
           ></v-combobox>
         </v-col>
-        <v-col cols="12" md="4">
+        <v-col cols="6" sm="3" md="2">
           <v-text-field
-            v-model="year" label="Year" type="number" placeholder="e.g., 2023"
+            v-model="startYear" label="Start Year" type="number" placeholder="e.g., 2020"
             variant="outlined" density="compact" hide-details="auto" min="1900"
             :max="new Date().getFullYear() + 1" required
           ></v-text-field>
         </v-col>
-        <v-col cols="12" md="2">
+        <v-col cols="6" sm="3" md="2">
+          <v-text-field
+            v-model="endYear" label="End Year" type="number" placeholder="e.g., 2023"
+            variant="outlined" density="compact" hide-details="auto" min="1900"
+            :max="new Date().getFullYear() + 1" required
+          ></v-text-field>
+        </v-col>
+        <v-col cols="6" sm="4" md="2">
           <v-checkbox
             v-model="publishedOnly" label="Published" density="compact"
             hide-details class="mt-n2 mb-n3"
           ></v-checkbox>
-        </v-col> <v-col cols="12" md="2">
+        </v-col> <v-col cols="6" sm="4" md="2"> 
           <v-btn type="submit" :loading="isLoading" :disabled="isLoading" color="primary" block size="large">
             {{ isLoading ? 'Searching...' : 'Search Papers' }}
           </v-btn>
@@ -156,7 +178,10 @@ watch([papers, viewMode], async () => {
     <div v-if="!isLoading && searchAttempted && !error" class="results-section mt-6">
       <v-row justify="space-between" align="center" class="mb-4">
          <v-col cols="auto">
-            <h2 class="text-h5">Results for {{ collaboration }} ({{ year }})</h2>
+             <!-- Update heading to show range -->
+            <h2 class="text-h5">
+               Results for {{ collaboration }} ({{ startYear === endYear ? startYear : `${startYear} - ${endYear}` }})
+            </h2>
             <!-- Use papers.length for count -->
             <p v-if="papers.length > 0">Found {{ papers.length }} papers (authors >= 30).</p>
             <p v-else>No papers found matching your criteria.</p>
@@ -221,7 +246,7 @@ watch([papers, viewMode], async () => {
     </div>
 
     <div v-else-if="!isLoading && !searchAttempted && !error" class="text-center mt-8 text-medium-emphasis">
-      <p>Enter a collaboration name and year, then click "Search Papers".</p>
+      <p>Enter a collaboration name, year range, then click "Search Papers".</p>
     </div>
   </v-container>
 </template>
